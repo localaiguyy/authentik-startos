@@ -1,0 +1,12 @@
+node_modules/
+javascript/
+*.s9pk
+docker-images/
+package-lock.json
+
+# Local deployment configs (may contain credentials)
+.deploy-config.json
+.deploy-credentials.json
+.startos-password
+.env
+.env.*

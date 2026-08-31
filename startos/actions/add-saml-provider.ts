@@ -129,6 +129,9 @@ To reconfigure it, edit or delete it in the Authentik admin UI, or re-run this a
         audience,
         sp_binding: input.binding,
         signing_kp: signingKey.pk,
+        // Authentik requires at least one of these when a signing keypair is
+        // set (HTTP 400 otherwise).
+        sign_assertion: true,
         property_mappings: samlMappings,
       })) as { pk: number }
 

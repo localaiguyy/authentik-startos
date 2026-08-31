@@ -232,6 +232,9 @@ To use Authentik group memberships in Cloudflare Access policies, enable "Groups
         audience: callbackUrl,
         sp_binding: 'post',
         signing_kp: signingKey.pk,
+        // Authentik requires at least one of these when a signing keypair is
+        // set (HTTP 400 otherwise).
+        sign_assertion: true,
         property_mappings: samlMappings,
       })) as { pk: number }
 

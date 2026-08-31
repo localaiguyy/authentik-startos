@@ -9,6 +9,10 @@ const configShape = z.object({
   // Security
   'secret-key': z.string().catch(''),
   'db-password': z.string().catch(''),
+  // API token used by package actions to provision SSO providers.
+  // Ensured to exist inside Authentik on every service start, so it also
+  // appears on installs upgraded from versions that predate it.
+  'provisioning-token': z.string().catch(''),
 
   // Server settings
   'base-url': z.string().catch(''),
@@ -44,6 +48,7 @@ export type Config = {
   'admin-password': string
   'secret-key': string
   'db-password': string
+  'provisioning-token': string
   'base-url': string
   'log-level': 'debug' | 'info' | 'warning' | 'error'
   'enable-ldap-outpost': boolean
@@ -61,6 +66,7 @@ export const defaultConfig: Config = {
   'admin-password': '',
   'secret-key': '',
   'db-password': '',
+  'provisioning-token': '',
   'base-url': '',
   'log-level': 'info',
   'enable-ldap-outpost': false,

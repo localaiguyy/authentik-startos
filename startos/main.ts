@@ -32,6 +32,12 @@ export const main = sdk.setupMain(async ({ effects }) => {
     configUpdated = true
   }
 
+  if (!config['provisioning-token']) {
+    console.info('Generating SSO provisioning API token...')
+    config['provisioning-token'] = generateSecureString(60)
+    configUpdated = true
+  }
+
   if (configUpdated) {
     await configFile.write(effects, config)
     console.info('Secure credentials generated and saved')
@@ -69,6 +75,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
     // Security
     `S9_AUTHENTIK_SECRET_KEY=${shellEscape(config['secret-key'])}`,
     `S9_AUTHENTIK_DB_PASSWORD=${shellEscape(config['db-password'])}`,
+    `S9_AUTHENTIK_PROVISIONING_TOKEN=${shellEscape(config['provisioning-token'])}`,
 
     // Server settings
     `S9_AUTHENTIK_BASE_URL=${shellEscape(config['base-url'])}`,

@@ -26,6 +26,29 @@ self-hosted services at it instead of maintaining a separate login for each one.
 | **Configure Settings** | Base URL, admin email, log level, LDAP outpost toggle, SMTP settings |
 | **Invite User (Link)** | Generate an invitation link to hand to a new user |
 | **Invite User (Email)** | Email an invitation directly (requires SMTP to be configured) |
+| **Set Up Cloudflare Access SSO** | Provision an OIDC (or SAML) provider for a Cloudflare Zero Trust team and get the values to paste into Cloudflare's login-method form |
+| **Add SAML Service Provider** | Provision a SAML 2.0 provider + application for any external service |
+| **Create Group** | Create a user group; group names ride along in SSO claims for policy matching |
+| **Show SSO Providers** | List configured applications/providers with their endpoints |
+
+## SSO Provisioning
+
+The "SSO Provisioning" actions drive the Authentik API for you, so common
+integrations need no manual admin-UI work. They authenticate with a
+package-managed API token (identifier `startos-provisioning`) that the
+entrypoint ensures exists inside Authentik on every service start — including
+on installs upgraded from versions that predate it.
+
+The flagship use case is **replacing per-user configuration at an edge proxy
+with Authentik as the identity source**. For Cloudflare Access: run *Set Up
+Cloudflare Access SSO*, paste the resulting client ID/secret and endpoint URLs
+into Zero Trust → Settings → Authentication → Login methods, and enable the
+Groups claim. From then on, adding or removing a person — or changing what
+they can reach via group-based Access policies — is a change in Authentik
+only.
+
+All provisioning actions are idempotent: an application whose slug already
+exists is reported and left untouched, never modified or replaced.
 
 ## Configuration
 

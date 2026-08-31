@@ -19,6 +19,7 @@ DB_PASSWORD="${S9_AUTHENTIK_DB_PASSWORD:-authentik}"
 BASE_URL="${S9_AUTHENTIK_BASE_URL:-}"
 LOG_LEVEL="${S9_AUTHENTIK_LOG_LEVEL:-info}"
 ENABLE_LDAP="${S9_AUTHENTIK_ENABLE_LDAP:-false}"
+PROVISIONING_TOKEN="${S9_AUTHENTIK_PROVISIONING_TOKEN:-}"
 
 # SMTP
 SMTP_HOST="${S9_AUTHENTIK_SMTP_HOST:-}"
@@ -53,7 +54,7 @@ echo "  Log Level: $LOG_LEVEL"
 echo "  LDAP Outpost: $ENABLE_LDAP"
 
 # ======================== PostgreSQL Setup ========================
-# Target PG version — explicitly set to 17 (shipped with Authentik 2026.2.1 base image)
+# Target PG version — explicitly set to 17 (shipped with the Authentik 2026.8.0 base image, Debian trixie)
 # Do NOT auto-detect with sort -rn — PGDG repo may install newer versions as dependencies
 PG_NEW=17
 export PG_MAJOR="$PG_NEW"
@@ -202,6 +203,10 @@ export AUTHENTIK_BOOTSTRAP_PASSWORD="$ADMIN_PASSWORD"
 export AUTHENTIK_BOOTSTRAP_EMAIL="$ADMIN_EMAIL"
 export AUTHENTIK_STORAGE__MEDIA__BACKEND="file"
 export AUTHENTIK_STORAGE__MEDIA__FILE__PATH="/data/media"
+# Required by Authentik starting with 2026.11; optional (but recommended) today
+if [ -n "$BASE_URL" ]; then
+    export AUTHENTIK_WEB__BASE_URL="$BASE_URL"
+fi
 
 # ======================== LDAP Outpost Environment ========================
 if [ "$ENABLE_LDAP" = "true" ]; then
@@ -273,6 +278,47 @@ echo "Migrations complete."
 # Run bootstrap tasks (creates akadmin user on first run)
 echo "Running bootstrap tasks..."
 python -m manage bootstrap_tasks || echo "Bootstrap tasks skipped (may already exist)"
+
+# ======================== Provisioning API Token ========================
+# Ensure the API token used by the package's SSO-provisioning actions exists.
+# Deliberately NOT the AUTHENTIK_BOOTSTRAP_TOKEN mechanism: that is only
+# applied on first boot, so installs upgraded from older versions would never
+# get a token. This runs every start and is idempotent.
+if [ -n "$PROVISIONING_TOKEN" ]; then
+    export S9_AUTHENTIK_PROVISIONING_TOKEN="$PROVISIONING_TOKEN"
+    cat > /tmp/s9_ensure_token.py <<'PYEOF'
+import os
+from authentik.core.models import Token, TokenIntents, User
+
+key = os.environ.get("S9_AUTHENTIK_PROVISIONING_TOKEN", "")
+user = User.objects.filter(username="akadmin").first()
+if key and user:
+    t = Token.objects.filter(identifier="startos-provisioning").first()
+    if t is None:
+        Token.objects.create(
+            identifier="startos-provisioning",
+            user=user,
+            intent=TokenIntents.INTENT_API,
+            key=key,
+            expiring=False,
+            description="Used by StartOS package actions to provision SSO providers",
+        )
+        print("Provisioning token created")
+    elif t.key != key or t.expiring:
+        t.key = key
+        t.user = user
+        t.expiring = False
+        t.save()
+        print("Provisioning token updated")
+    else:
+        print("Provisioning token OK")
+else:
+    print("Provisioning token skipped (no key or akadmin not created yet)")
+PYEOF
+    python -m manage shell -c "exec(open('/tmp/s9_ensure_token.py').read())" \
+        || echo "WARNING: provisioning token setup failed — SSO provisioning actions will not work until the next start"
+    rm -f /tmp/s9_ensure_token.py
+fi
 
 # ======================== Stop Temporary Services ========================
 echo "Stopping temporary services before supervisord..."

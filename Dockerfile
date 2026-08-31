@@ -9,10 +9,10 @@
 # the pre-built Go+Python monolithic binary.
 
 # Stage 1: Extract LDAP outpost binary (Go binary, ~22MB)
-FROM ghcr.io/goauthentik/ldap:2026.2.1 AS ldap-outpost
+FROM ghcr.io/goauthentik/ldap:2026.8.0 AS ldap-outpost
 
 # Stage 2: Main image
-FROM ghcr.io/goauthentik/server:2026.2.1
+FROM ghcr.io/goauthentik/server:2026.8.0
 
 USER root
 

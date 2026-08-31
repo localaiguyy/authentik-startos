@@ -6,8 +6,9 @@ import { v1_1_0 } from './v1.1.0'
 import { v1_1_1 } from './v1.1.1'
 import { v1_1_2 } from './v1.1.2'
 import { v1_1_3 } from './v1.1.3'
+import { v1_1_4 } from './v1.1.4'
 
-export { v1_1_3 as current }
+export { v1_1_4 as current }
 export const other: any[] = [
   v1_0_0_beta_1,
   v1_0_0_beta_2,
@@ -16,4 +17,5 @@ export const other: any[] = [
   v1_1_0,
   v1_1_1,
   v1_1_2,
+  v1_1_3,
 ]

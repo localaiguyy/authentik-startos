@@ -8,6 +8,10 @@ mkdir -p /root/data/postgres /root/data/start9
 mkdir -p /root/data/authentik/media /root/data/authentik/certs
 mkdir -p /root/data/authentik/custom-templates
 mkdir -p /var/run/postgresql /var/log/supervisor
+# Private TMPDIR for the worker: server and worker derive unix socket paths
+# from temp_dir(), and sharing one container means sharing one temp dir —
+# see the worker stanza in supervisord.conf.
+mkdir -p /tmp/authentik-worker
 # Authentik 2025.12+ serves files from /data/media instead of /media
 mkdir -p /data/media /certs
 
@@ -252,14 +256,32 @@ run_migrations() {
     fi
 }
 
-if ! run_migrations; then
-    if [ "$FRESH_INSTALL" = "true" ]; then
+MIGRATE_LOG=/tmp/migrate-attempt.log
+if ! run_migrations > "$MIGRATE_LOG" 2>&1; then
+    cat "$MIGRATE_LOG"
+    if grep -q "Major version skips are not allowed" "$MIGRATE_LOG"; then
+        # Upstream's canonical runner refuses upgrades that skip a version
+        # family (e.g. 2026.2 -> 2026.8). Upstream provides an explicit
+        # override for exactly this; Django migrations are cumulative, so a
+        # single full pass is safe. Do NOT fall through to the legacy fakes —
+        # they mark unrun migrations as applied and corrupt the schema
+        # (verified the hard way: it broke a 2026.2 -> 2026.8 upgrade).
+        echo "WARNING: Upstream refused a multi-version upgrade. Re-running with the upstream override flag..."
+        AUTHENTIK_MIGRATIONS__DANGEROUSLY_ALLOW_MULTIPLE_MAJOR_VERSION_UPGRADES=true run_migrations
+    elif [ "$FRESH_INSTALL" = "true" ]; then
         # Fresh database: the upgrade workarounds below MUST NOT run (faking
         # migrations that never ran corrupts the schema). A transient ordering
         # failure clears on a second pass; a real failure should surface.
         echo "WARNING: Migration failed on a fresh database. Retrying once..."
         run_migrations
         echo "Migrations complete (after retry)."
+    elif ! grep -qE "guardian\.UserObjectPermission|authentik_core_user_roles|authentik_core_user_user_permissions" "$MIGRATE_LOG"; then
+        # The legacy workarounds below are ONLY valid for the specific
+        # 2024.12-era failure signature. Anything else must surface instead of
+        # being "fixed" by faking migrations.
+        echo "ERROR: Migration failed with an unrecognized error (see above)."
+        echo "NOT applying the legacy 2024.12-era workarounds - they corrupt any other upgrade."
+        exit 1
     else
     echo "WARNING: Migration failed. Applying upgrade workarounds..."
     # When upgrading from 2024.12.3 to 2026.2.1, three migration issues arise:
@@ -312,6 +334,9 @@ if ! run_migrations; then
     echo "Running remaining migrations..."
     python -m manage migrate 2>&1
     fi
+else
+    # Success on the first pass — surface the tail for the service log.
+    tail -20 "$MIGRATE_LOG"
 fi
 echo "Migrations complete."
 

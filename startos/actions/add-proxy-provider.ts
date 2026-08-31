@@ -181,7 +181,7 @@ export const addProxyProvider = sdk.Action.withInput(
           service_connection: embedded.service_connection,
         })
         outpostNote =
-          'Attached to the embedded outpost — the auth gate is active on this instance.'
+          'Attached to the embedded outpost. RESTART THE SERVICE to activate the gate — the embedded outpost only picks up new proxy hosts at startup.'
       } else {
         outpostNote =
           'WARNING: no embedded outpost found. Assign the provider to an outpost in the Authentik admin UI.'

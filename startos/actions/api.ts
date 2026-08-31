@@ -149,8 +149,11 @@ export async function findApplication(
   api: ApiClient,
   slug: string,
 ): Promise<any | null> {
+  // superuser_full_list: without it, an application that is group-restricted
+  // becomes invisible to this query, breaking idempotency checks and
+  // bind-group lookups for exactly the apps that have bindings.
   const res = (await api.get(
-    `/core/applications/?slug=${encodeURIComponent(slug)}`,
+    `/core/applications/?slug=${encodeURIComponent(slug)}&superuser_full_list=true`,
   )) as { results: any[] }
   return res.results.find((a) => a.slug === slug) || null
 }

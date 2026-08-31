@@ -12,7 +12,8 @@ New actions (joining the 1.1.x set):
 - Add Proxy Provider (Auth Gate) — put Authentik in front of a service with
   no SSO support: the embedded outpost authenticates, enforces group
   membership, and reverse-proxies to the upstream. Attached to the embedded
-  outpost automatically.
+  outpost automatically; restart the service afterwards — the embedded
+  outpost only picks up new proxy hosts at startup.
 - Restrict Application to Group — add a group policy binding to any
   application (idempotent; reports an existing binding).
 - Set Up LDAP Outpost — creates the LDAP provider, application, and outpost

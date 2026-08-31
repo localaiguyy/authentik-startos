@@ -33,8 +33,10 @@ export const showSsoProviders = sdk.Action.withoutInput(
       const externalUrl = (config['base-url'] || '').replace(/\/+$/, '')
       const api = apiClient(await resolveApiBase(config), token)
 
+      // superuser_full_list: without it the API filters to apps the token
+      // user can access per policy, silently hiding group-restricted ones.
       const apps = (await api.get(
-        `/core/applications/?page_size=100&ordering=name`,
+        `/core/applications/?page_size=100&ordering=name&superuser_full_list=true`,
       )) as {
         results: {
           name: string

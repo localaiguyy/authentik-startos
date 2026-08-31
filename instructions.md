@@ -19,7 +19,11 @@ The package can provision SSO providers for you — no manual clicking through t
 
 - **Set Up Cloudflare Access SSO** — makes Authentik the identity provider for a Cloudflare Zero Trust team. Enter your team domain (`<team>.cloudflareaccess.com`) and the action creates the provider and application, then shows the Client ID, Client Secret, and endpoint URLs to paste into Cloudflare's login-method form. Manage users and groups in Authentik; Cloudflare Access policies can match on Authentik group names (enable the Groups claim in Cloudflare's OIDC settings).
 - **Add SAML Service Provider** — creates a SAML 2.0 provider and application for any external service. Enter the service's ACS URL and entity ID; the action returns the SSO URL and metadata URL for the service's SAML configuration.
+- **Add OIDC Provider** — generic OIDC provider + application for any service with native OIDC support, with an optional group restriction.
+- **Add Proxy Provider (Auth Gate)** — puts Authentik in front of a service that has no SSO support: the embedded outpost authenticates users, enforces group membership, and reverse-proxies to the upstream. Point your ingress (reverse proxy or tunnel) for that hostname at Authentik's web port, preserving the Host header.
 - **Create Group** — creates a user group. Group memberships are included in SSO claims, so downstream policies can match on them.
+- **Restrict Application to Group** — adds a group policy binding to an existing application, so only that group's members pass authorization.
+- **Set Up LDAP Outpost** — creates the LDAP provider, application, and outpost object; then enable the LDAP Outpost toggle in Configure Settings and restart.
 - **Show SSO Providers** — lists every configured application/provider with its endpoints.
 
 These actions are idempotent: an application that already exists is reported and left untouched, never modified or replaced.

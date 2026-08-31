@@ -8,6 +8,7 @@ export type ApiClient = {
   base: string
   get: (path: string) => Promise<any>
   post: (path: string, body: any) => Promise<any>
+  put: (path: string, body: any) => Promise<any>
 }
 
 // The action runtime is not guaranteed to share a network namespace with the
@@ -61,6 +62,8 @@ export function apiClient(base: string, token: string): ApiClient {
     get: (path: string) => request(path),
     post: (path: string, body: any) =>
       request(path, { method: 'POST', body: JSON.stringify(body) }),
+    put: (path: string, body: any) =>
+      request(path, { method: 'PUT', body: JSON.stringify(body) }),
   }
 }
 

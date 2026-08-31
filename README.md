@@ -27,9 +27,13 @@ self-hosted services at it instead of maintaining a separate login for each one.
 | **Invite User (Link)** | Generate an invitation link to hand to a new user |
 | **Invite User (Email)** | Email an invitation directly (requires SMTP to be configured) |
 | **Set Up Cloudflare Access SSO** | Provision an OIDC (or SAML) provider for a Cloudflare Zero Trust team and get the values to paste into Cloudflare's login-method form |
+| **Add OIDC Provider** | Generic OIDC provider + application for a service with native OIDC support (confidential or public/PKCE, optional group restriction) |
 | **Add SAML Service Provider** | Provision a SAML 2.0 provider + application for any external service |
+| **Add Proxy Provider (Auth Gate)** | Put Authentik in front of a service with no SSO of its own — the embedded outpost authenticates, checks group membership, and reverse-proxies to the upstream |
 | **Create Group** | Create a user group; group names ride along in SSO claims for policy matching |
-| **Show SSO Providers** | List configured applications/providers with their endpoints |
+| **Restrict Application to Group** | Add a group policy binding to an existing application |
+| **Set Up LDAP Outpost** | Create the LDAP provider, application, and outpost object (pair with the LDAP Outpost toggle in Configure Settings) |
+| **Show SSO Providers** | List all configured applications/providers with their endpoints |
 
 ## SSO Provisioning
 
@@ -39,8 +43,12 @@ package-managed API token (identifier `startos-provisioning`) that the
 entrypoint ensures exists inside Authentik on every service start — including
 on installs upgraded from versions that predate it.
 
-The flagship use case is **replacing per-user configuration at an edge proxy
-with Authentik as the identity source**. For Cloudflare Access: run *Set Up
+The flagship use case is **moving authentication off an edge provider and
+into Authentik entirely**: *Add Proxy Provider* gates an app that has no SSO
+of its own (the embedded outpost handles login, group checks, and proxying —
+point your ingress at Authentik's web port, preserving the Host header), and
+*Add OIDC Provider* covers apps with native OIDC. The edge then only carries
+transport. For Cloudflare Access: run *Set Up
 Cloudflare Access SSO*, paste the resulting client ID/secret and endpoint URLs
 into Zero Trust → Settings → Authentication → Login methods, and enable the
 Groups claim. From then on, adding or removing a person — or changing what
@@ -61,8 +69,9 @@ particular network — you supply the values that match your own deployment.
 - **Admin Email** — the address attached to the `akadmin` account.
 - **Log Level** — `info` is recommended; use `debug` only while investigating.
 - **Enable LDAP Outpost** — off by default. When enabled, exposes LDAP on 3389
-  and LDAPS on 6636. You must also create an LDAP outpost in the Authentik admin
-  UI; the wrapper reads its API token from the database at startup.
+  and LDAPS on 6636. Create the outpost object first with the **Set Up LDAP
+  Outpost** action (or in the admin UI); the wrapper reads its API token from
+  the database at startup.
 - **SMTP** — optional. Without it, email invitations and password recovery
   emails are unavailable; link-based invitations still work.
 

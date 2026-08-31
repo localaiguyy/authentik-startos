@@ -1,6 +1,6 @@
 {
   "name": "authentik-startos",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Authentik Identity Provider for StartOS 0.4.0",
   "scripts": {
     "build": "rm -rf ./javascript && ncc build startos/index.ts -o ./javascript",

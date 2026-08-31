@@ -167,7 +167,25 @@ chown -R postgres:postgres "$PG_DATA" /var/run/postgresql
 chmod 700 "$PG_DATA"
 
 echo "Starting PostgreSQL..."
+# If this script dies after this point (e.g. a failed migration under set -e),
+# stop the temporary postmaster on the way out. Without this, the next
+# entrypoint run finds postmaster.pid held by the still-running server and
+# crash-loops on "lock file already exists". The success path replaces this
+# shell with tini via exec, so the trap only fires on failure.
+trap 'gosu postgres "$PG_NEW_BIN/pg_ctl" -D "$PG_DATA" -m fast -w stop 2>/dev/null || true' EXIT
 gosu postgres "$PG_NEW_BIN/pg_ctl" -D "$PG_DATA" -w start -o "-c listen_addresses=localhost"
+
+# Detect whether this is a brand-new database BEFORE any migration runs.
+# The legacy fake-migration workarounds below are ONLY valid for the
+# 2024.12-era upgrade path; applying them to a fresh database marks
+# migrations as applied that never ran and corrupts the schema state.
+AUTHENTIK_TABLES=$(gosu postgres psql -U authentik -d authentik -tAc \
+    "SELECT count(*) FROM pg_tables WHERE tablename = 'authentik_core_user'" 2>/dev/null || echo 0)
+if [ "$AUTHENTIK_TABLES" = "0" ]; then
+    FRESH_INSTALL=true
+else
+    FRESH_INSTALL=false
+fi
 
 if ! gosu postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='authentik'" | grep -q 1; then
     echo "Creating authentik database user..."
@@ -221,7 +239,28 @@ fi
 export PYTHONPATH=/
 echo "Running Authentik database migrations..."
 cd /
-if ! python -m manage migrate 2>&1; then
+
+# Prefer upstream's canonical migration runner (advisory lock + the exact
+# pass ordering stock docker installs use). Raw `manage migrate` can trip a
+# mid-run check against not-yet-created tables (seen on a fresh 2026.8.0
+# install: ProgrammingError on authentik_version_history).
+run_migrations() {
+    if [ -f /lifecycle/migrate.py ]; then
+        python -m lifecycle.migrate 2>&1
+    else
+        python -m manage migrate 2>&1
+    fi
+}
+
+if ! run_migrations; then
+    if [ "$FRESH_INSTALL" = "true" ]; then
+        # Fresh database: the upgrade workarounds below MUST NOT run (faking
+        # migrations that never ran corrupts the schema). A transient ordering
+        # failure clears on a second pass; a real failure should surface.
+        echo "WARNING: Migration failed on a fresh database. Retrying once..."
+        run_migrations
+        echo "Migrations complete (after retry)."
+    else
     echo "WARNING: Migration failed. Applying upgrade workarounds..."
     # When upgrading from 2024.12.3 to 2026.2.1, three migration issues arise:
     #
@@ -272,6 +311,7 @@ if ! python -m manage migrate 2>&1; then
 
     echo "Running remaining migrations..."
     python -m manage migrate 2>&1
+    fi
 fi
 echo "Migrations complete."
 

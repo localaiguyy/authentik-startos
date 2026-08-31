@@ -315,9 +315,10 @@ if ! run_migrations; then
 fi
 echo "Migrations complete."
 
-# Run bootstrap tasks (creates akadmin user on first run)
-echo "Running bootstrap tasks..."
-python -m manage bootstrap_tasks || echo "Bootstrap tasks skipped (may already exist)"
+# Note: `manage bootstrap_tasks` was removed in Authentik 2026.8. The akadmin
+# user is now created asynchronously by the worker's blueprint application
+# after supervisord starts (which is also why the token-ensure supervisord
+# one-shot exists — see token_ensure.sh).
 
 # ======================== Provisioning API Token ========================
 # Ensure the API token used by the package's SSO-provisioning actions exists.

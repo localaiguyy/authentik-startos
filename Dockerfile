@@ -82,6 +82,7 @@ COPY --from=ldap-outpost /ldap /usr/local/bin/authentik-ldap
 COPY supervisord.conf /etc/supervisor/conf.d/authentik.conf
 COPY docker_entrypoint.sh /app/docker_entrypoint.sh
 COPY ldap_outpost_wrapper.sh /app/ldap_outpost_wrapper.sh
+COPY token_ensure.sh /app/token_ensure.sh
 
 # Copy backup/restore scripts
 RUN mkdir -p /assets/compat
@@ -92,6 +93,7 @@ COPY assets/compat/restore.sh /assets/compat/restore.sh
 RUN chmod +x \
     /app/docker_entrypoint.sh \
     /app/ldap_outpost_wrapper.sh \
+    /app/token_ensure.sh \
     /assets/compat/backup.sh \
     /assets/compat/restore.sh
 

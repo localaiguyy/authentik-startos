@@ -12,6 +12,14 @@ mkdir -p /var/run/postgresql /var/log/supervisor
 # from temp_dir(), and sharing one container means sharing one temp dir —
 # see the worker stanza in supervisord.conf.
 mkdir -p /tmp/authentik-worker
+
+# Remove stale unix socket files from a previous run. A same-version service
+# restart reuses the subcontainer (only version-change installs get a fresh
+# one), and the Rust server does not unlink an existing socket path before
+# binding — a leftover authentik-metrics.sock crash-loops the server with
+# "Address already in use". Nothing can legitimately hold these at entrypoint
+# time: the previous run's processes are gone before this script starts.
+rm -f /dev/shm/authentik*.sock /tmp/authentik-worker/authentik*.sock
 # Authentik 2025.12+ serves files from /data/media instead of /media
 mkdir -p /data/media /certs
 
